@@ -13,6 +13,7 @@
 #include <signal.h>
 #include <sys/ioctl.h>
 #include <linux/i2c-dev.h>
+#include "led.h" 
 #define SSD1306_I2C_DEV 0x3c
 using namespace std;
 void ssd1306_Init(int i2c_fd);

@@ -83,6 +83,6 @@ void* led_init() {
     set_gpio_output(gpio_ctr,26);
     set_gpio_output_value(gpio_ctr,13,0); //Blue
     set_gpio_output_value(gpio_ctr,19,0); //Green
-    set_gpio_output_value(gpio_ctr,26,1); //Red
+    set_gpio_output_value(gpio_ctr,26,0); //Red
     return gpio_ctr;
 }

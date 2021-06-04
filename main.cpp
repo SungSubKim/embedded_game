@@ -335,10 +335,19 @@ void update_frame_area(int i2c_fd, Frame* cur, const unsigned char* logo){
 
 
 }
-void handler(int sig) {
-    static int i = 0;
+void update() {
+	return;
+}
+void render(int i) {
     printf("Goes for %d / %d\n", i, total_frames);
     update_frame_area(i2c_fd, &frames[i], rpi);
+	return;
+}
+void handler(int sig) {
+	
+    static int i = 0;
+	update();
+	render(i);
     
     i = (i+1)%total_frames;
 }

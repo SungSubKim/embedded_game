@@ -1,4 +1,4 @@
-const unsigned char font[96][7] = {
+unsigned char font[96][7] = {
 	{0x00,0x00,0x00,0x00,0x00,0x00,0x00}, //  
 	{0x7f,0x51,0x7f,0x00,0x00,0x00,0x00}, // !
 	{0x0f,0x09,0x0f,0x09,0x0f,0x00,0x00}, // "
@@ -98,8 +98,25 @@ const unsigned char font[96][7] = {
 };
 
 #define FONT_NAME "Minimum+1_font"
-#define FONT_WIDTH 6
+#define FONT_WIDTH 8
 #define FONT_HEIGHT 1 //1 page
+void font_rotate() {
+	unsigned char tmp,tmp_arr[8];
+	for(int i=0; i< 96;i++) {
+		for(int j=0; j<8;j++)
+			tmp_arr[j]=0; 
+		for(int j=0; j<8;j++) {
+			if(j<7) {
+				for(int k=0; k<8;k++) {
+					tmp_arr[k]+= (font[i][j]%2)<<(7-j);
+					font[i][j] >>=1;
+				}
+			}
+		}
+		for(int j=0;j<8;j++) 
+			font[i][j] = tmp[j];
+	}
+}
 void write_char(int i2c_fd, char c, int x, int y) {
 	if(c < ' ') c = ' ';
 	update_area(i2c_fd,font[c-' '],x,y,FONT_WIDTH,FONT_HEIGHT);
@@ -108,6 +125,6 @@ void write_str(int i2c_fd, char* str, int x, int y) {
 	char c;
 	while (c = *str++) {
 		write_char(i2c_fd,c,x,y);
-		x += FONT_WIDTH;
+		y += FONT_HEIGHT;
 	}
 }

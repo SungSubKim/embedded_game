@@ -57,6 +57,7 @@ int main_init() {//peripheral
 		printf("led_init_panic\n");
 		return -1;
 	}
+	font_rotate();
 	return 0;
 }
 void main_finalize() {

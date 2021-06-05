@@ -234,7 +234,7 @@ int ssd1306_main_init() {
 	free(data_clear);
 	return 0;
 }
-int frame_init() {
+int animation_init() {
 	frames = (Frame*) malloc(sizeof(Frame) * MAX_FRAME);
 	int cur_x = LOGO_POS_INIT_X;
 	int cur_y = LOGO_POS_INIT_Y;

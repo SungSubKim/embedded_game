@@ -77,10 +77,9 @@ void save_old_val() {
 void display(int i) {
     printf("Goes for %d / %d\n", i, total_frames);
 	update_full(i2c_fd,background);
-	write_str(i2c_fd, day_str, 2, 0);
-	write_str(i2c_fd, day_str, 2, 0);
-	write_str(i2c_fd, day_str, 2, 0);
-	write_str(i2c_fd, day_str, 2, 0);
+	write_str(i2c_fd, day_str, S_WIDTH-4, 1);
+	write_str(i2c_fd, phaze_str, S_WIDTH-4-8, 1);
+	write_str(i2c_fd, score_str, S_WIDTH-4-8*2, 1);
 //    update_frame_area(i2c_fd, &frames[i], rpi);
 	return;
 }

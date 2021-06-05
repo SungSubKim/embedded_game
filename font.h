@@ -114,7 +114,7 @@ void font_rotate() {
 			}
 		}
 		for(int j=0;j<8;j++) 
-			font[i][j] = tmp[j];
+			font[i][j] = tmp_arr[j];
 	}
 }
 void write_char(int i2c_fd, char c, int x, int y) {

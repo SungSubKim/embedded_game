@@ -25,7 +25,7 @@ def process():
     display_items.append(display_item(0,      128 - 16, "bot1.bmp"))
     display_items.append(display_item(16,     128 - 16, "bot2.bmp"))
     display_items.append(display_item(16 * 2, 128 - 16, "bot3.bmp"))
-    display_items.append(display_item(16 * 3, 128 - 16, "bot3.bmp"))
+    display_items.append(display_item(16 * 3, 128 - 16, "bot4.bmp"))
     if day==0:
         print('game_start')
         day+=1
@@ -107,10 +107,10 @@ def display():
 
     if old_day==0 or level!=old_level:
         print(background[level])
-        display_items.append(display_item(0,0,"background"+str(level)+".bmp"))
         if level==4:
             print('end')
             exit(0)
+    display_items.append(display_item(0,0,"background"+str(level)+".bmp"))
 
     diff= time.time()-event_time
     color =[0,0,0]

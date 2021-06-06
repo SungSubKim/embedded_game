@@ -360,6 +360,7 @@ static int __init rpi_key_init(void)
 }
 static void __exit rpi_key_exit(void) {
 	iounmap(gpio_ctr);
+    i2c_unregister_device(ssd1306_client);
     i2c_del_driver(&ssd1306_driver);
 	device_destroy(cRpiKeyClass, MKDEV(majorNumber, 0));
 	class_unregister(cRpiKeyClass);

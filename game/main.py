@@ -5,7 +5,7 @@ tact =[1,1,1,1]
 old_tact = list(tact)
 level, day, score, phaze = 0,0,10,0
 background = ["seed","kids","child","adult","sakura"]
-phaze_str= ["moring","afternoon","night"]
+phaze_str= ["morning","afternoon","night"]
 old_level, old_day, old_score, old_phaze = level, day,score,phaze
 water_chance= True
 last_water = 0
@@ -187,6 +187,9 @@ def process():
         remove_expired_events()
         print(f"Current event: {[e.type for e in event]}")
         old_day = day 
+        
+        if day==5 or day==8 or day==12 or day==20:
+            level+=1
 
     if time.time() - last_sudden_event > event_interval:
         get_env() # 온/습도 센서 기반 확률 산정

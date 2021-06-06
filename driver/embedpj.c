@@ -74,7 +74,14 @@ static struct i2c_board_info am2320_board_info = {
     I2C_BOARD_INFO(AM2320_NAME, AM2320_ADDR)
 };
 
-static int i2c_write(struct i2c_client *client, uint8_t *buf, uint8_t len){
+static int i2c_write(struct i2c_client *client, uint8_t *buf, int len){
+    //printk(KERN_INFO "i2c_write %d bytes\n", len);
+    /*int tt;
+    for(tt=0; tt<len; tt++){
+        printk(KERN_INFO "%x ", buf[tt]);
+    }
+    printk(KERN_INFO "\n");
+    */
     int ret = i2c_master_send(client, buf, len);
     return ret;
 }
@@ -84,53 +91,92 @@ static int i2c_read(struct i2c_client *client, uint8_t *buf, uint8_t len){
     return ret;
 }
 
-static void ssd1306_write(int cmd, uint8_t data){
+static void ssd1306_command(uint8_t data){
     uint8_t buf[2];
-    if(cmd){
-        buf[0] = (0<<7) || (0<<6);
-    }
-    else{
-        buf[0] = (0<<7) || (0<<6);
-    }
+    buf[0] = (0<<7) | (0<<6);
     buf[1] = data;
     i2c_write(ssd1306_client, buf, 2);
 }
 
+static void ssd1306_data(uint8_t *data, uint32_t len){
+    uint8_t* buf;
+    buf = kmalloc(sizeof(uint8_t) * (len+1), GFP_KERNEL);
+    if(buf == NULL){
+        printk(KERN_INFO "ssd1306_data kernel memory failed\n");
+    }
+    buf[0] = (0<<7) | (1<<6);
+    memcpy(buf+1, data, len);
+    i2c_write(ssd1306_client, buf, len+1);
+    kfree(buf);
+}
+
+static void ssd1306_cursor(uint8_t x_bit, uint8_t y_page){
+    ssd1306_command(0x20);
+    ssd1306_command(0);
+
+    ssd1306_command(0x21);
+    ssd1306_command(x_bit);
+    ssd1306_command(127); // column end (showing is height)
+
+    ssd1306_command(0x22);
+    ssd1306_command(y_page);
+    ssd1306_command(7); // row end (showing is row)
+}
+
+static void ssd1306_fill(uint8_t with_page){
+    ssd1306_cursor(0,0);
+    uint8_t *data;
+    data = (uint8_t*) kmalloc(8*128 * sizeof(uint8_t), GFP_KERNEL);
+    if(data == NULL){
+        printk(KERN_INFO "ssd1306_fill kernel memory failed\n");
+    }
+    int page, col;
+    for(col=0; col<128; col++){
+        for(page=0; page<8; page++){
+            //printk(KERN_INFO "page setup (%d, %d) => %d\n", page, col, 128*page+col);
+            data[(128*page)+col] = with_page;            
+        }
+    }
+    printk(KERN_INFO "ssd1306 fill page setup done %x\n", with_page);
+    ssd1306_data(data, 8*128);
+    kfree(data);
+}
+
 static int ssd1306_remove(struct i2c_client *client){
-    ssd1306_write(true, 0xAE);
+    ssd1306_command(0xAE);
     return 0;
 }
 
 static int ssd1306_display_init(void){
-    ssd1306_write(1, 0xA8);
-    ssd1306_write(1, 0x3F);
+    ssd1306_command(0xA8);
+    ssd1306_command(0x3F);
 
-    ssd1306_write(1, 0xD3);
-    ssd1306_write(1, 0x00);
+    ssd1306_command(0xD3);
+    ssd1306_command(0x00);
     
-    ssd1306_write(1, 0x40);
+    ssd1306_command(0x40);
 
-    ssd1306_write(1, 0xA0);
+    ssd1306_command(0xA0);
 
-    ssd1306_write(1, 0xC0);
+    ssd1306_command(0xC0);
 
-    ssd1306_write(1, 0xDA);
-    ssd1306_write(1, 0x12);
+    ssd1306_command(0xDA);
+    ssd1306_command(0x12);
 
-    ssd1306_write(1, 0x81);
-    ssd1306_write(1, 0x7F);
+    ssd1306_command(0x81);
+    ssd1306_command(0x7F);
 
-    ssd1306_write(1, 0xA4);
+    ssd1306_command(0xA4);
 
-    ssd1306_write(1, 0xA6);
+    ssd1306_command(0xA6);
 
-    ssd1306_write(1, 0xD5);
-    ssd1306_write(1, 0x80);
+    ssd1306_command(0xD5);
+    ssd1306_command(0x80);
 
-    ssd1306_write(1, 0x8D);
-    ssd1306_write(1, 0x14);
+    ssd1306_command(0x8D);
+    ssd1306_command(0x14);
 
-    ssd1306_write(1, 0xAF);
+    ssd1306_command(0xAF);
 
     return 0;
 }
@@ -267,7 +313,33 @@ long device_ioctl( struct file *file, unsigned int ioctl_num, unsigned long ioct
 		set_gpio_output_value(gpio_ctr,26,gpio26);
 	}
     if(ioctl_num == 200){
+        uint64_t param_value[128];
+        copy_from_user((void*) param_value, (void*) ioctl_param, sizeof(uint64_t)*128);
+        int showing_row_idx, showing_col_idx, page, col;
+        uint8_t *ssd1306_tmp = kmalloc(sizeof(uint8_t) * 128 * 8, GFP_KERNEL);
+        if(ssd1306_tmp == NULL){
+            printk(KERN_INFO "ssd1306 ioctl kernel memory failed\n");
+        }
+        for(col=0; col<128; col++){
+            for(page=0; page<8; page++){
+                ssd1306_tmp[(128*page)+col] = 0x00; // tmp clear            
+            }
+        }
+        for(showing_col_idx = 0; showing_col_idx < 64; showing_col_idx++){
+            for(showing_row_idx=0; showing_row_idx < 128; showing_row_idx++){
+                uint8_t actual_col = showing_row_idx;
+                uint8_t actual_row_page = showing_col_idx/8;
+                uint8_t actual_row_offset = showing_col_idx%8;
+                uint64_t showing_extract = 1;
+                showing_extract <<= showing_col_idx;
+                ssd1306_tmp[(128*(actual_row_page))+actual_col] |= 
+                    showing_extract & param_value[showing_row_idx]?1<<actual_row_offset:0<<actual_row_offset;
+            }
+        }
+        ssd1306_cursor(0,0);
+        ssd1306_data(ssd1306_tmp, 128*8);
 
+        kfree(ssd1306_tmp);
     }
     if(ioctl_num == 300){
         
@@ -295,45 +367,17 @@ static int init_gpio(void){
     return 0x00;
 }
 
-int ssd1306_command(uint8_t cmd){
-    uint8_t buf[2];
-    buf[0] = (0<<7) | (0<<6);
-    buf[1] = cmd;
-
-    return i2c_master_send(ssd1306_client, buf, 2);
-}
-
-/*
-int i2c_data_fw(struct file *file, uint8_t* data, size_t size){
-    mm_segment_t oldfs;
-    int ret;
-    uint8_t* send_data = vmalloc(sizeof(uint8_t) * (size+1));
-    memcpy(send_data+1, data, size);
-
-    oldfs = get_fs();
-    set_fs(get_fs());
-
-    send_data[0] = (0<<7) | (1<<6);
-
-    ret = kernel_write(file, send_data, size+1, &file->f_pos);
-
-    set_fs(oldfs);
-    return ret;
-}*/
-
 static int init_i2c_ssd1306(void){
-    ssd1306_val = vmalloc(sizeof(uint8_t) * 64 * 16);
+    ssd1306_val = kmalloc(sizeof(uint8_t) * 128 * 8, GFP_KERNEL);
+    if(ssd1306_val == NULL){
+        printk(KERN_INFO "ssd1306_init kernel memory failed\n");
+    }
 
     ssd1306_client = i2c_new_client_device(embedpj_i2c_adapter, &ssd1306_board_info);
     i2c_add_driver(&ssd1306_driver);
     i2c_put_adapter(embedpj_i2c_adapter);
-    
-    /*i2c_file = filp_open("/dev/i2c-1", O_RDWR, 0);
-
-    i2c_file->f_op->unlocked_ioctl(i2c_file, I2C_SLAVE, SSD1306_ADDR);
-
-    uint8_t test[10] = {0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff};
-    i2c_data_fw(i2c_file, test, 10);*/
+        
+    ssd1306_fill(0x75);
     
     printk(KERN_INFO "SSD1306 Load done?");
 
@@ -362,6 +406,7 @@ static void __exit rpi_key_exit(void) {
 	iounmap(gpio_ctr);
     i2c_unregister_device(ssd1306_client);
     i2c_del_driver(&ssd1306_driver);
+    kfree(ssd1306_val);
 	device_destroy(cRpiKeyClass, MKDEV(majorNumber, 0));
 	class_unregister(cRpiKeyClass);
 	class_destroy(cRpiKeyClass);

@@ -97,6 +97,14 @@ def get_env():
     event_chances[3] = 30 / 100 # 비료는 고정 확률
 
 
+def remove_expired_events():
+    global event, led_last_changed, led_event_idx
+
+    event[:] = [e for e in event if e.is_expired(day) == False] # remove expired events
+    led_last_changed = time.time()
+    led_event_idx = 0
+    
+
 rpikey = open("/dev/rpikey","w")
 display_items =[]
 selected =0
@@ -104,6 +112,7 @@ def process():
     global day, phaze, water_chance, score, last_water, \
         level, selected, event, event_chances, display_items, \
         current_animation, animation_start_time, animation_duration, old_day, \
+        led_last_changed, led_event_idx, \
         last_sudden_event, event_interval
 
     display_items.clear()
@@ -113,7 +122,7 @@ def process():
     display_items.append(display_item(16 * 2, 128 - 16, "bot3.bmp"))
     display_items.append(display_item(16 * 3, 128 - 16, "bot4.bmp"))
 
-    event[:] = [e for e in event if e.is_expired(day) == False]
+    remove_expired_events()
 
     if day==0:
         print('game_start')
@@ -152,6 +161,7 @@ def process():
         print(f'Day passed to {day} from {old_day}')
         if random.random() < event_chances[0]:
             event.append(event_item(EVENT_WATER, only_on_day=day))
+        remove_expired_events()
         print(f"Current event: {[e.type for e in event]}")
         old_day = day 
 
@@ -165,6 +175,7 @@ def process():
                 continue
             if random.random() < event_chances[i]: # 확률적으로 이벤트 생성
                 event.append(event_item(EVENTS[i], duration=random.randrange(5,8)))
+        remove_expired_events()
         print(f"Current event: {[e.type for e in event]}")
 
     if score  <1:
@@ -193,11 +204,11 @@ def display():
         if len(event) == 0: # 이벤트가 없을 때
             color = COLOR_WHITE
         else:
-            led_event_idx += 1 # 있으면 순회
             if led_event_idx >= len(event):
                 led_event_idx = 0
             led_last_changed = time.time()
             color = EVENT_TO_COLOR[event[led_event_idx].type]
+            led_event_idx += 1
 
         val = array.array('L', color)
         fcntl.ioctl(rpikey, 101, val, 0)

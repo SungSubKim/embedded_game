@@ -216,6 +216,10 @@ def display():
     data=[0 for _ in range(128)]
     for dis in display_items:
         update_area(dis.x,dis.y,dis.img_name,data)
+        
+    write_str('day '+str(day), 0, 0,data);
+    write_str(phaze_str[phaze], 0, 8,data);
+    write_str('score '+str(score), 0, 16, data);
     val = array.array('Q',data)
     fcntl.ioctl(rpikey,200,val,0)
 

@@ -20,13 +20,15 @@ animation_start_time = 0
 animation_duration = 0
 phase_start_time = 0
 phase_duration = 4
+state = None
 
 rpikey = open("/dev/rpikey","w")
 display_items =[]
 selected =0
 
+STATE_LOADING = "loading"
 STATE_DIED    = "died"
-STATE_SUCCESS = "ended"
+STATE_END     = "ended"
 STATE_HOWTO   = "howto"
 STATE_INGAME  = "ingame"
 
@@ -107,6 +109,8 @@ def get_env():
     event_chances[2] = ((32-abs(32-res[1])) + (70-abs(70-res[0]))) / 100 # 적절한 고온 다습에서 벌레 출현 증가
     event_chances[3] = 30 / 100 # 비료는 고정 확률
 
+    print(f"Read environment, event chances: {event_chances}")
+
 
 def remove_expired_events():
     global event, led_last_changed, led_event_idx, score
@@ -129,7 +133,8 @@ def process():
         current_animation, animation_start_time, animation_duration, old_day, \
         led_last_changed, led_event_idx, \
         last_sudden_event, event_interval, \
-        phase_duration, phase_start_time
+        phase_duration, phase_start_time, \
+        state, last_state \
 
     display_items.clear()
     
@@ -139,6 +144,31 @@ def process():
     display_items.append(display_item(16 * 3, 128 - 16, "bot4.bmp"))
 
     remove_expired_events()
+
+    if state == STATE_HOWTO:
+        if tact[2] == 1 and old_tact[2] == 0:
+            state = STATE_INGAME
+            day = 0
+            score = 10
+            led_last_changed = 0
+            led_event_idx = 0
+            phase_start_time = 0
+            phase_duration = 4
+            phaze = 0
+            level = 0
+            event = []
+            current_animation = None
+            selected = 0
+        return
+    if state == STATE_DIED:
+        if tact[2] == 1 and old_tact[2] == 0:
+            state = STATE_HOWTO
+        return
+    if state == STATE_END:
+        if tact[2] == 1 and old_tact[2] == 0:
+            state = STATE_HOWTO
+        return        
+
 
     if day==0:
         print('game_start')
@@ -223,10 +253,15 @@ def process():
 
     if score  <1:
         print('plant is dead')
-        exit(0)
+        state = STATE_DIED
 
 def display():
-    global led_event_idx, led_last_changed
+    global led_event_idx, led_last_changed, state, last_state, level
+
+    if last_state == state and state != STATE_INGAME:
+        val = array.array('L', COLOR_OFF)
+        fcntl.ioctl(rpikey, 101, val, 0)
+        return
 
     if day!=old_day:
         print(f'day {day}')
@@ -238,7 +273,8 @@ def display():
     if old_day==0 or level!=old_level:
         if level==5:
             print('end')
-            exit(0)
+            state = STATE_END
+            level = 4
     display_items.append(display_item(0,0,"background"+str(level)+".bmp"))
 
     if level==4:
@@ -251,7 +287,7 @@ def display():
     if time.time() - led_last_changed > 0.3: # 1.0: led 변경 주기
         color = COLOR_OFF
         if len(event) == 0: # 이벤트가 없을 때
-            color = COLOR_WHITE
+            color = COLOR_OFF
         else:
             if led_event_idx >= len(event):
                 led_event_idx = 0
@@ -263,13 +299,33 @@ def display():
         fcntl.ioctl(rpikey, 101, val, 0)
 
     data=[0 for _ in range(128)]
+
+    if state != STATE_INGAME:
+        last_state = state
+        if state == STATE_HOWTO:
+            howto()
+            return
+        write_str('press select', 6, 114, data);
+        write_str('to restart', 19, 120, data);
+        display_items[:] = [d for d in display_items if "back" in d.img_name or "parti" in d.img_name]        
+    
     for dis in display_items:
         update_area(dis.x,dis.y,dis.img_name,data)
+
+    if state == STATE_DIED:
+        write_str('You died!', 15, 100, data, inversed=True);
+
+    if state == STATE_END:
+        write_str('CLEARED!', 16, 100, data, inversed=True);
 
     write_str('  day '+str(day), 0, 8,data);
     write_str(phaze_str[phaze], 0, 16,data);
     write_str('score '+str(score), 0, 0, data);
     val = array.array('Q',data)
+
+    
+
+
     fcntl.ioctl(rpikey,200,val,0)
 
 def callback():
@@ -302,9 +358,46 @@ def load_imgs():
     for dis in display_items:
         update_area(dis.x,dis.y,dis.img_name,data)
 
+def show_loading():
+    val = array.array('L', COLOR_OFF)
+    fcntl.ioctl(rpikey, 101, val, 0)
+    data=[0 for _ in range(128)]
+    write_str('Loading...', 14, 61, data);
+    val = array.array('Q',data)
+    fcntl.ioctl(rpikey,200,val,0)
+
+def howto():
+    val = array.array('L', COLOR_OFF)
+    fcntl.ioctl(rpikey, 101, val, 0)
+    data=[0 for _ in range(128)]
+    write_str('HOW-TO', 20, 0, data);
+    write_str('on the middle', 0, 8, data);
+    write_str('your tree grow', 0, 14, data);
+    write_str('on the below', 0, 22, data);
+    write_str('your selected', 0, 28, data);
+    write_str('menu is shown', 0, 34, data);
+    write_str('button guide', 0, 42, data);
+    write_str('UL: select left', 0, 48, data);
+    write_str('UR: select right', 0, 54, data);
+    write_str('DL: OK, SELCT', 0, 60, data);
+    write_str('DR: phase skip', 0, 66, data);
+    write_str('led guide', 0, 74, data);
+    write_str('blue: water', 0, 80, data);
+    write_str('red: sun', 0, 86, data);
+    write_str('green: kill bug', 0, 92, data);
+    write_str('yellow: ferti.', 0, 98, data);
+    write_str('press select', 4, 114, data);
+    write_str('to start', 26, 120, data);
+    val = array.array('Q',data)
+    fcntl.ioctl(rpikey,200,val,0)
+
 def main():
-    load_imgs()
+    global state, last_state
+    state = STATE_HOWTO
+    last_state = STATE_LOADING
     font_rotate()
+    show_loading()
+    load_imgs()
     while True:
         process()
         display()

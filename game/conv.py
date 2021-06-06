@@ -34,9 +34,12 @@ def update_area(x,y,image_name,data):
     # return data
 
 # update_area()
-def update_char(font_data,x,y,data):
+def update_char(font_data,x,y,data, inversed = False):
     for row in range(8):
-        data[y+row] |= font_data[row] << (64-1-x-2)
+        if inversed:
+            data[y+row] ^= font_data[row] << (64-1-x-2)
+        else:
+            data[y+row] |= font_data[row] << (64-1-x-2)
 
 font = [ #96,3
    [0x00,0x00,0x00], #  
@@ -146,15 +149,15 @@ def font_rotate():
                 fo[j] = fo[j]>>1
             res.append(tmp)
         font[idx]=res
-def write_char(c, x, y,data) :
+def write_char(c, x, y,data, inversed=False) :
     c = ord(c)
     if c < ord(' '):
         c = ord(' ')
-    update_char(font[c-ord(' ')],x,y,data)
+    update_char(font[c-ord(' ')],x,y,data, inversed=inversed)
 
-def write_str(strA,x,y,data):
+def write_str(strA,x,y,data, inversed=False):
     cnt=0
     while cnt<len(strA):
-        write_char(strA[cnt],x,y,data)
+        write_char(strA[cnt],x,y,data, inversed=inversed)
         cnt += 1
         x += 3 + 1

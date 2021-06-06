@@ -2,6 +2,7 @@ from PIL import Image
 
 mapped_image = {}
 
+
 def update_area(x,y,image_name,data):
     # im = Image.open(input("image name: "))
     if (x, y, image_name) in mapped_image.keys():
@@ -20,26 +21,14 @@ def update_area(x,y,image_name,data):
         mapped_image[(x, y, image_name)] = (height, width, val)
         update_area(x, y, image_name, data)
     
-    
-        # print(' ')
-    # for x in range
-    # print(data)
-    # for row in range(height):
-    #     for col in range(width):
-    #         if (data[y+row]&2**(64-1-(x+col)))>0:
-    #             print('O',end='')
-    #         else:
-    #             print(' ',end='')
-    #     print(' ')
-    # return data
 
-# update_area()
 def update_char(font_data,x,y,data, inversed = False):
     for row in range(8):
         if inversed:
             data[y+row] ^= font_data[row] << (64-1-x-2)
         else:
             data[y+row] |= font_data[row] << (64-1-x-2)
+
 
 font = [ #96,3
    [0x00,0x00,0x00], #  
@@ -138,7 +127,9 @@ font = [ #96,3
    [0x22,0x3e,0x08], # }
    [0x02,0x06,0x04], # ~
    [0x00,0x00,0x00]
-]#
+]
+
+
 def font_rotate():
     for idx,fo in enumerate(font):
         res=[]
@@ -149,11 +140,14 @@ def font_rotate():
                 fo[j] = fo[j]>>1
             res.append(tmp)
         font[idx]=res
+
+
 def write_char(c, x, y,data, inversed=False) :
     c = ord(c)
     if c < ord(' '):
         c = ord(' ')
     update_char(font[c-ord(' ')],x,y,data, inversed=inversed)
+
 
 def write_str(strA,x,y,data, inversed=False):
     cnt=0

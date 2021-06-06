@@ -3,10 +3,10 @@ import fcntl,array,random,time
 
 tact =[1,1,1,1]
 old_tact = list(tact)
-level, day, score, phaze = 0,0,10,0
+level, day, score, phase = 0,0,10,0
 background = ["seed","kids","child","adult","sakura"]
-phaze_str= ["morning","afternoon","night"]
-old_level, old_day, old_score, old_phaze = level, day,score,phaze
+phase_str= ["morning","afternoon","night"]
+old_level, old_day, old_score, old_phase = level, day,score,phase
 water_chance= True
 last_water = 0
 event= []
@@ -19,7 +19,7 @@ current_animation = None
 animation_start_time = 0
 animation_duration = 0
 phase_start_time = 0
-phase_duration = 4
+phase_duration = 3
 state = None
 
 rpikey = open("/dev/rpikey","w")
@@ -121,14 +121,14 @@ def remove_expired_events():
     if prev_count != changed_count:
         led_last_changed = 0
         led_event_idx = 0
-        score -= prev_count - changed_count
+        score -= (prev_count - changed_count)*2
     
 
 rpikey = open("/dev/rpikey","w")
 display_items =[]
 selected =0
 def process():
-    global day, phaze, water_chance, score, last_water, \
+    global day, phase, water_chance, score, last_water, \
         level, selected, event, event_chances, display_items, \
         current_animation, animation_start_time, animation_duration, old_day, \
         led_last_changed, led_event_idx, \
@@ -153,8 +153,8 @@ def process():
             led_last_changed = 0
             led_event_idx = 0
             phase_start_time = 0
-            phase_duration = 4
-            phaze = 0
+            phase_duration = 3
+            phase = 0
             level = 0
             event = []
             current_animation = None
@@ -174,7 +174,7 @@ def process():
         print('game_start')
         day+=1
         phase_start_time = time.time()
-        phase_duration = 4
+        phase_duration = 3
 
     if current_animation != None:
         if current_animation == EVENT_WRONG:
@@ -201,27 +201,27 @@ def process():
             animation_start_time = time.time()
             animation_duration = 0.3
             if EVENTS[selected] == EVENT_WATER:
-                if phaze == 0:
-                    score += 10
-                elif phaze == 1:
+                if phase == 0:
                     score += 7
-                elif phaze == 2:
-                    score += 3
+                elif phase == 1:
+                    score += 5
+                elif phase == 2:
+                    score += 2
             else:
-                score += 2
+                score += 3
         else: # wrong press
             current_animation = EVENT_WRONG
             animation_start_time = time.time()
             animation_duration = 0.3
-            score -= 1
+            score -= 3
 
     if time.time() - phase_start_time > phase_duration \
             or (tact[3] == 1 and old_tact[3] == 0):
         phase_start_time = time.time()
-        phase_duration = 4
-        phaze += 1 
-        if phaze >= 3:
-            phaze = 0
+        phase_duration = 3
+        phase += 1 
+        if phase >= 3:
+            phase = 0
             day += 1
 
     display_items.append(display_item(16 * selected, 128-16, "selected.bmp"))
@@ -242,7 +242,7 @@ def process():
         get_env() # 온/습도 센서 기반 확률 산정
         last_sudden_event = time.time()
         print(f"Sudden event generation!")
-        event_interval = random.randrange(3, 10)
+        event_interval = random.randrange(2, 7)
         for i in range(1,4): # 물은 날이 변경될 때만 진행
             if EVENTS[i] in [e.type for e in event]: # 이벤트가 있을 경우 생성하지 않음
                 continue
@@ -267,8 +267,8 @@ def display():
         print(f'day {day}')
         if score<=3:
             print('your plant is weak')
-    if phaze!=old_phaze:
-        print(phaze_str[phaze])
+    if phase!=old_phase:
+        print(phase_str[phase])
 
     if old_day==0 or level!=old_level:
         if level==5:
@@ -319,12 +319,9 @@ def display():
         write_str('CLEARED!', 16, 100, data, inversed=True);
 
     write_str('  day '+str(day), 0, 8,data);
-    write_str(phaze_str[phaze], 0, 16,data);
+    write_str(phase_str[phase], 0, 16,data);
     write_str('score '+str(score), 0, 0, data);
     val = array.array('Q',data)
-
-    
-
 
     fcntl.ioctl(rpikey,200,val,0)
 
@@ -335,8 +332,8 @@ def callback():
         tact[i]=ar[i]
 
 def save_old_val():
-    global old_level, old_day, old_score, old_phaze,old_tact,old_event
-    old_level, old_day, old_score, old_phaze = level, day, score, phaze
+    global old_level, old_day, old_score, old_phase,old_tact,old_event
+    old_level, old_day, old_score, old_phase = level, day, score, phase
     old_event = event
     old_tact = list(tact)
 

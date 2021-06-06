@@ -164,6 +164,9 @@ def process():
         remove_expired_events()
         print(f"Current event: {[e.type for e in event]}")
         old_day = day 
+        
+        if day==5 or day==8 or day==12 or day==20:
+            level+=1
 
     if time.time() - last_sudden_event > event_interval:
         get_env() # 온/습도 센서 기반 확률 산정

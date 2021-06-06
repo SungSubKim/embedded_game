@@ -188,7 +188,7 @@ def process():
         print(f"Current event: {[e.type for e in event]}")
         old_day = day 
         
-        if day==5 or day==8 or day==12 or day==20:
+        if day==3 or day==5 or day==7 or day==10:
             level+=1
 
     if time.time() - last_sudden_event > event_interval:
@@ -219,12 +219,12 @@ def display():
         print(phaze_str[phaze])
 
     if old_day==0 or level!=old_level:
-        print(background[level])
-        if level==4:
+        if level==5:
             print('end')
             exit(0)
     display_items.append(display_item(0,0,"background"+str(level)+".bmp"))
-
+    if level==4:
+        display_items.append(display_item(0, 0, "particle" + str(score) + ".bmp"))
     if time.time() - led_last_changed > 0.3: # 1.0: led 변경 주기
         color = COLOR_OFF
         if len(event) == 0: # 이벤트가 없을 때

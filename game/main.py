@@ -11,6 +11,7 @@ water_chance= True
 last_water = 0
 event= []
 event_chances = [0,0,0,0]
+last_sudden_event = 0
 led_event_idx = 0
 led_last_changed = 0
 current_animation = None
@@ -85,13 +86,17 @@ selected =0
 def process():
     global day, phaze, water_chance, score, last_water, \
         level, selected, event, event_chances, display_items, \
-        current_animation, animation_start_time, animation_duration, old_day
+        current_animation, animation_start_time, animation_duration, old_day, \
+        last_sudden_event
+
     display_items.clear()
     
     display_items.append(display_item(0,      128 - 16, "bot1.bmp"))
     display_items.append(display_item(16,     128 - 16, "bot2.bmp"))
     display_items.append(display_item(16 * 2, 128 - 16, "bot3.bmp"))
     display_items.append(display_item(16 * 3, 128 - 16, "bot4.bmp"))
+
+    event[:] = [e for e in event if e.is_expired(day) == False]
 
     if day==0:
         print('game_start')
@@ -133,7 +138,8 @@ def process():
         print(f'Day passed to {day} from {old_day}')
         event.append(event_item(EVENT_SUN, duration=10))
         event.append(event_item(EVENT_BUG, duration=10))
-        event.append(event_item(EVENT_WATER, only_on_day=day))
+        if day % 2:
+            event.append(event_item(EVENT_WATER, only_on_day=day))
         print(f"Current evnet: {event}")
         old_day = day 
 
@@ -160,10 +166,10 @@ def display():
 
     if time.time() - led_last_changed > 1.0: # 1.0: led 변경 주기
         color = COLOR_OFF
-        if len(event) == 0:
+        if len(event) == 0: # 이벤트가 없을 때
             color = COLOR_WHITE
         else:
-            led_event_idx += 1
+            led_event_idx += 1 # 있으면 순회
             if led_event_idx >= len(event):
                 led_event_idx = 0
             led_last_changed = time.time()

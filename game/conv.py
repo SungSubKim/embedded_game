@@ -132,10 +132,8 @@ def font_rotate():
         for i in range(8):
             tmp =0
             for j in range(3):
-                # if (fo[j]>>(7-i)) == 0:
-                #     tmp|=1<<(2-j)
-                tmp|=(fo[j]>>(7-i))<<(2-j)
-                fo[j] = fo[j]%(2**(7-i))
+                tmp|=(fo[j]%2)<<(2-j)
+                fo[j] = fo[j]>>1
             res.append(tmp)
         font[idx]=res
 def write_char(c, x, y,data) :
@@ -149,4 +147,4 @@ def write_str(strA,x,y,data):
     while cnt<len(strA):
         write_char(strA[cnt],x,y,data)
         cnt+=1
-        x += 3
+        x += 3+1

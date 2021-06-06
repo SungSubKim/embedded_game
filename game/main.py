@@ -12,6 +12,7 @@ last_water = 0
 event= []
 event_chances = [0,0,0,0]
 last_sudden_event = 0
+event_interval = 0
 led_event_idx = 0
 led_last_changed = 0
 current_animation = None
@@ -35,6 +36,8 @@ EVENT_WATER      = "water"
 EVENT_SUN        = "sun"
 EVENT_BUG        = "bug"
 EVENT_FERTILIZER = "fertilizer"
+
+EVENTS = [EVENT_WATER, EVENT_SUN, EVENT_BUG, EVENT_FERTILIZER]
 
 EVENT_TO_COLOR = {
     EVENT_WATER     : COLOR_BLUE,
@@ -79,6 +82,20 @@ class event_item():
         else:
             return time.time() > self.exp
 
+def get_env():
+    global event_chances
+
+    sensor_init()
+    val = array.array('H', [0, 0])
+    fcntl.ioctl(rpikey, 301, val, 1)
+    res = [x / 10 for x in val]  # [0]: 습도, [1]: 온도
+    
+    # 확률은 0 밑이나 1 위로 올라가도 됨, 알아서 처리됨
+    event_chances[0] = (120 - res[0]) / 100 # 습도가 낮으면 물 확률 증가
+    event_chances[1] = (50 - res[1]) / 100 # 온도가 낮으면 햇빛 확률 증가
+    event_chances[2] = ((32-abs(32-res[1])) + (70-abs(70-res[0]))) / 100 # 적절한 고온 다습에서 벌레 출현 증가
+    event_chances[3] = 30 / 100 # 고정 확률
+
 
 rpikey = open("/dev/rpikey","w")
 display_items =[]
@@ -87,7 +104,7 @@ def process():
     global day, phaze, water_chance, score, last_water, \
         level, selected, event, event_chances, display_items, \
         current_animation, animation_start_time, animation_duration, old_day, \
-        last_sudden_event
+        last_sudden_event, event_interval
 
     display_items.clear()
     
@@ -120,7 +137,7 @@ def process():
             current_animation = IDX_TO_EVENT[selected]
             del event[[e.type for e in event].index(IDX_TO_EVENT[selected])]
             animation_start_time = time.time()
-            animation_duration = 2.5
+            animation_duration = 0.5
 
     elif tact[3] == 1 and old_tact[3] == 0:
         phaze += 1
@@ -130,18 +147,25 @@ def process():
 
     display_items.append(display_item(16 * selected, 128-16, "selected.bmp"))
 
-    sensor_init()
-    val = array.array('H', [0, 0])
-    fcntl.ioctl(rpikey, 301, val, 1)
-    res = [x / 10 for x in val]  # [0]: 습도, [1]: 온도
-    if day != old_day: # TODO 확률 추가
+    if day != old_day:
+        get_env()
         print(f'Day passed to {day} from {old_day}')
-        event.append(event_item(EVENT_SUN, duration=10))
-        event.append(event_item(EVENT_BUG, duration=10))
-        if day % 2:
+        if random.random() < event_chances[0]:
             event.append(event_item(EVENT_WATER, only_on_day=day))
-        print(f"Current evnet: {event}")
+        print(f"Current evnet: {[e.type for e in event]}")
         old_day = day 
+
+    if time.time() - last_sudden_event > event_interval:
+        get_env()
+        last_sudden_event = time.time()
+        print(f"Sudden event generation!")
+        event_interval = random.randrange(7, 12)
+        for i in range(1,4): # except water
+            if EVENTS[i] in [e.type for e in event]: # if that event already exists
+                continue
+            if random.random() < event_chances[i]: # generate event!
+                event.append(event_item(EVENTS[i], duration=random.randrange(5,8)))
+        print(f"Current evnet: {[e.type for e in event]}")
 
     if score  <1:
         print('plant is dead')
@@ -164,7 +188,7 @@ def display():
             exit(0)
     display_items.append(display_item(0,0,"background"+str(level)+".bmp"))
 
-    if time.time() - led_last_changed > 1.0: # 1.0: led 변경 주기
+    if time.time() - led_last_changed > 0.3: # 1.0: led 변경 주기
         color = COLOR_OFF
         if len(event) == 0: # 이벤트가 없을 때
             color = COLOR_WHITE

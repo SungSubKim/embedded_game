@@ -1,5 +1,6 @@
 #include <vector>
 #include <iostream>
+using namespace std;
 #include "rpi_logo.h"
 #include "skku.h"
 #define S_WIDTH 128
@@ -18,8 +19,6 @@
 #include "gpio.h" 
 #include "ssd1306.h"
 #include "font.h"
-#include "background.h"
-using namespace std;
 
 int main_init();
 void main_finalize();
@@ -27,7 +26,7 @@ void handler(int sig);
 //global variable
 int level=1, day=0, score=10, phaze=0;//day 0 : before start
 int old_level = level, old_day=day, old_score=score, old_phaze =phaze;
-//uint8_t *background;
+uint8_t *background[10];
 char day_str[20],phaze_str[20],score_str[20]="score",score_str2[10];
 
 int main(int argc, char* argv[]) {
@@ -59,6 +58,11 @@ int main_init() {//peripheral
 		return -1;
 	}
 	font_rotate();
+	background[0] = (uint8_t*)&level0[0];
+	background[1] = (uint8_t*)&level1[0];
+	background[2] = (uint8_t*)&level2[0];
+	background[3] = (uint8_t*)&level3[0];
+	background[4] = (uint8_t*)&level4[0];
 	printf("main_init complete\n");
 	return 0;
 }

@@ -22,6 +22,11 @@ struct Frame{
 
 #define SSD1306_I2C_DEV 0x3c
 #define MAX_FRAME 999999
+#include "level0.h"
+#include "level1.h"
+#include "level2.h"
+#include "level3.h"
+#include "level4.h"
 
 int i2c_fd;
 Frame* frames;

@@ -5,7 +5,7 @@ tact =[0,0,0,0]
 old_tact = list(tact)
 level, day, score, phaze = 0,0,5,0
 background = ["seed","kids","child","adult","sakura"]
-phaze_str= ["moring","daytime","night"]
+phaze_str= ["moring","afternoon","night"]
 old_level, old_day, old_score, old_phaze = level, day,score,phaze
 water_chance= True
 last_water = 0
@@ -217,9 +217,9 @@ def display():
     for dis in display_items:
         update_area(dis.x,dis.y,dis.img_name,data)
 
-    write_str('day '+str(day), 0, 0,data);
-    write_str(phaze_str[phaze], 0, 8,data);
-    write_str('score '+str(score), 0, 16, data);
+    write_str('day '+str(day), 63-10, 0,data);
+    write_str(phaze_str[phaze], 63-10, 8,data);
+    write_str('score '+str(score), 63-10, 16, data);
     val = array.array('Q',data)
     fcntl.ioctl(rpikey,200,val,0)
 

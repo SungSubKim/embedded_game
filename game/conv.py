@@ -146,5 +146,5 @@ def write_str(strA,x,y,data):
     cnt=0
     while cnt<len(strA):
         write_char(strA[cnt],x,y,data)
-        cnt+=1
-        x += 3
+        cnt += 1
+        x += 3 + 1

@@ -1,9 +1,9 @@
 from conv import update_area,write_str,font_rotate
 import fcntl,array,random,time
 
-tact =[0,0,0,0]
+tact =[1,1,1,1]
 old_tact = list(tact)
-level, day, score, phaze = 0,0,5,0
+level, day, score, phaze = 0,0,10,0
 background = ["seed","kids","child","adult","sakura"]
 phaze_str= ["moring","afternoon","night"]
 old_level, old_day, old_score, old_phaze = level, day,score,phaze
@@ -18,6 +18,8 @@ led_last_changed = 0
 current_animation = None
 animation_start_time = 0
 animation_duration = 0
+phase_start_time = 0
+phase_duration = 10
 
 rpikey = open("/dev/rpikey","w")
 display_items =[]
@@ -98,11 +100,15 @@ def get_env():
 
 
 def remove_expired_events():
-    global event, led_last_changed, led_event_idx
+    global event, led_last_changed, led_event_idx, score
 
+    prev_count = len(event)
     event[:] = [e for e in event if e.is_expired(day) == False] # remove expired events
-    led_last_changed = time.time()
-    led_event_idx = 0
+    changed_count = len(event)
+    if prev_count != changed_count:
+        led_last_changed = 0
+        led_event_idx = 0
+        score -= prev_count - changed_count
     
 
 rpikey = open("/dev/rpikey","w")
@@ -113,7 +119,8 @@ def process():
         level, selected, event, event_chances, display_items, \
         current_animation, animation_start_time, animation_duration, old_day, \
         led_last_changed, led_event_idx, \
-        last_sudden_event, event_interval
+        last_sudden_event, event_interval, \
+        phase_duration, phase_start_time
 
     display_items.clear()
     
@@ -127,6 +134,8 @@ def process():
     if day==0:
         print('game_start')
         day+=1
+        phase_start_time = time.time()
+        phase_duration = 10
 
     if current_animation != None:
         display_items.append(display_item(16 * 2,0,  f"ani{selected+1}.bmp"))
@@ -147,10 +156,24 @@ def process():
             del event[[e.type for e in event].index(IDX_TO_EVENT[selected])]
             animation_start_time = time.time()
             animation_duration = 0.5
+            if EVENTS[selected] == EVENT_WATER:
+                if phaze == 0:
+                    score += 10
+                elif phaze == 1:
+                    score += 7
+                elif phaze == 2:
+                    score += 3
+            else:
+                score += 2
+        else: # wrong press
+            score -= 1
 
-    elif tact[3] == 1 and old_tact[3] == 0:
-        phaze += 1
-        if phaze == 3:
+    if time.time() - phase_start_time > phase_duration \
+            or (tact[3] == 1 and old_tact[3] == 0):
+        phase_start_time = time.time()
+        phase_duration = 10
+        phaze += 1 
+        if phaze >= 3:
             phaze = 0
             day += 1
 
@@ -169,7 +192,7 @@ def process():
         get_env() # 온/습도 센서 기반 확률 산정
         last_sudden_event = time.time()
         print(f"Sudden event generation!")
-        event_interval = random.randrange(7, 12)
+        event_interval = random.randrange(3, 12)
         for i in range(1,4): # 물은 날이 변경될 때만 진행
             if EVENTS[i] in [e.type for e in event]: # 이벤트가 있을 경우 생성하지 않음
                 continue
@@ -217,14 +240,14 @@ def display():
     for dis in display_items:
         update_area(dis.x,dis.y,dis.img_name,data)
 
-    write_str('day '+str(day), 63-15, 0,data);
-    write_str(phaze_str[phaze], 63-15, 8,data);
-    write_str('score '+str(score), 63-15, 16, data);
+    write_str('  day '+str(day), 0, 8,data);
+    write_str(phaze_str[phaze], 0, 16,data);
+    write_str('score '+str(score), 0, 0, data);
     val = array.array('Q',data)
     fcntl.ioctl(rpikey,200,val,0)
 
 def callback():
-    ar = array.array('L', [0, 0,0,0])
+    ar = array.array('L', [0,0,0,0])
     fcntl.ioctl(rpikey, 100, ar, 1)
     for i in range(4):
         tact[i]=ar[i]
@@ -241,12 +264,11 @@ def sensor_init(): # 센서 읽기 요청
     time.sleep(0.001)
 
 def main():
-	font_rotate()
+    font_rotate()
     while True:
         process()
         display()
         save_old_val()
         callback()
-        time.sleep(0.02)
 if __name__=="__main__":
     main()

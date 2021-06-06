@@ -31,5 +31,12 @@
 *.out
 *.app
 
-#
+# Kernel mode 
+*.cmd
+*.ko
+*.mod.c
+*.symvers
+*.order
+
+# Executable built file
 game

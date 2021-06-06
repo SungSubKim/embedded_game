@@ -1,4 +1,4 @@
-from conv import update_area
+from conv import update_area,write_str,font_rotate
 import fcntl,array,random,time
 
 tact =[0,0,0,0]
@@ -205,7 +205,7 @@ def display():
     data=[0 for _ in range(128)]
     for dis in display_items:
         update_area(dis.x,dis.y,dis.img_name,data)
-        
+
     write_str('day '+str(day), 0, 0,data);
     write_str(phaze_str[phaze], 0, 8,data);
     write_str('score '+str(score), 0, 16, data);
@@ -230,6 +230,7 @@ def sensor_init(): # 센서 읽기 요청
     time.sleep(0.001)
 
 def main():
+	font_rotate()
     while True:
         process()
         display()

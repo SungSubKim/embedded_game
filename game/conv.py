@@ -126,15 +126,17 @@ font = [ #96,7
     [0x06,0x02,0x05,0x01,0x01,0x00,0x00], # ~
     [0x00,0x00,0x00,0x00,0x00,0x00,0x00]
 ]
-for idx,fo in enumerate(font):
-    res=[]
-    for i in range(8):
-        tmp =0
-        for j in range(7):
-            tmp|=(fo[j]>>(7-i))<<(6-j)
-            fo[j] = fo[j]%(2**(7-i))
-        res.append(tmp)
-    font[idx]=res
+def font_rotate():
+    for idx,fo in enumerate(font):
+        res=[]
+        for i in range(8):
+            tmp =0
+            for j in range(7):
+                if (fo[j]>>(7-i)) == 0:
+                    tmp|=1<<(6-j)
+                fo[j] = fo[j]%(2**(7-i))
+            res.append(tmp)
+        font[idx]=res
 def write_char(c, x, y,data) :
     c = ord(c)
     if c < ord(' '):

@@ -25,6 +25,12 @@ rpikey = open("/dev/rpikey","w")
 display_items =[]
 selected =0
 
+STATE_DIED    = "died"
+STATE_SUCCESS = "ended"
+STATE_HOWTO   = "howto"
+STATE_INGAME  = "ingame"
+
+
 COLOR_WHITE   = [1,1,1]
 COLOR_OFF     = [0,0,0]
 COLOR_RED     = [1,0,0]
@@ -45,7 +51,7 @@ EVENTS = [EVENT_WATER, EVENT_SUN, EVENT_BUG, EVENT_FERTILIZER, EVENT_WRONG]
 EVENT_TO_COLOR = {
     EVENT_WATER     : COLOR_BLUE,
     EVENT_SUN       : COLOR_RED,
-    EVENT_BUG       : COLOR_MAGENTA,
+    EVENT_BUG       : COLOR_GREEN,
     EVENT_FERTILIZER: COLOR_YELLOW,
 }
 
@@ -199,7 +205,7 @@ def process():
         print(f"Current event: {[e.type for e in event]}")
         old_day = day 
         
-        if day==3 or day==5 or day==7 or day==10:
+        if day in [3,5,7,10,11]:
             level+=1
 
     if time.time() - last_sudden_event > event_interval:
@@ -234,8 +240,14 @@ def display():
             print('end')
             exit(0)
     display_items.append(display_item(0,0,"background"+str(level)+".bmp"))
+
     if level==4:
-        display_items.append(display_item(0, 0, "particle" + str(score) + ".bmp"))
+        p_count = score//8
+        if p_count > 10:
+            p_count = 10
+        if p_count < 1:
+            p_count = 1
+        display_items.append(display_item(0, 0, "particle" + str(p_count) + ".bmp"))
     if time.time() - led_last_changed > 0.3: # 1.0: led 변경 주기
         color = COLOR_OFF
         if len(event) == 0: # 이벤트가 없을 때
@@ -277,7 +289,21 @@ def sensor_init(): # 센서 읽기 요청
     fcntl.ioctl(rpikey, 300, val, 0)
     time.sleep(0.001)
 
+def load_imgs():
+    for i in range(1, 4+1):
+        display_items.append(display_item(16*(i-1), 128-16, f"bot{i}.bmp"))
+        display_items.append(display_item(16*(i-1), 128-16, "selected.bmp"))
+        display_items.append(display_item(0, 0, f"background{i}.bmp"))
+        display_items.append(display_item(16 * 2,0,  f"ani{i}.bmp"))
+    for i in range(1, 10+1):
+        display_items.append(display_item(0, 0, "particle" + str(i) + ".bmp"))
+    display_items.append(display_item(16 * 2,0,  f"wrong.bmp"))
+    data=[0 for _ in range(128)]
+    for dis in display_items:
+        update_area(dis.x,dis.y,dis.img_name,data)
+
 def main():
+    load_imgs()
     font_rotate()
     while True:
         process()

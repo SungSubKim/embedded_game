@@ -1,16 +1,26 @@
 from PIL import Image
+
+mapped_image = {}
+
 def update_area(x,y,image_name,data):
     # im = Image.open(input("image name: "))
-    im = Image.open(image_name)
-    width, height = im.size[0],im.size[1]
-    #print(f'{width} {height}')
-    pix = im.load()
-    # data= [0 for _ in range(128)]
-    # x, y = 16,128-16
-    for row in range(height):
-        for col in range(width):
-            if sum(pix[(col,row)])/3 > 128:
-                data[y+row] |= 2**(64-1-(x+col))
+    if (x, y, image_name) in mapped_image.keys():
+        height, width, val = mapped_image[(x, y, image_name)]
+        for row in range(height):
+            data[y+row] |= val[y+row]
+    else:
+        im = Image.open(image_name)
+        width, height = im.size[0],im.size[1]
+        pix = im.load()
+        val = [0 for _ in range(128)]
+        for row in range(height):
+            for col in range(width):
+                if sum(pix[(col,row)])/3 > 128:
+                    val[y+row] |= 2**(64-1-(x+col))
+        mapped_image[(x, y, image_name)] = (height, width, val)
+        update_area(x, y, image_name, data)
+    
+    
         # print(' ')
     # for x in range
     # print(data)

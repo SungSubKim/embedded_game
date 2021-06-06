@@ -19,7 +19,7 @@ current_animation = None
 animation_start_time = 0
 animation_duration = 0
 phase_start_time = 0
-phase_duration = 10
+phase_duration = 4
 
 rpikey = open("/dev/rpikey","w")
 display_items =[]
@@ -38,8 +38,9 @@ EVENT_WATER      = "water"
 EVENT_SUN        = "sun"
 EVENT_BUG        = "bug"
 EVENT_FERTILIZER = "fertilizer"
+EVENT_WRONG      = "wrong"
 
-EVENTS = [EVENT_WATER, EVENT_SUN, EVENT_BUG, EVENT_FERTILIZER]
+EVENTS = [EVENT_WATER, EVENT_SUN, EVENT_BUG, EVENT_FERTILIZER, EVENT_WRONG]
 
 EVENT_TO_COLOR = {
     EVENT_WATER     : COLOR_BLUE,
@@ -53,6 +54,7 @@ IDX_TO_EVENT = {
     1: EVENT_SUN,
     2: EVENT_BUG,
     3: EVENT_FERTILIZER,
+    4: EVENT_WRONG
 }
 
 EVENT_TO_IDX = {
@@ -60,6 +62,7 @@ EVENT_TO_IDX = {
     EVENT_SUN        :1,
     EVENT_BUG        :2,
     EVENT_FERTILIZER :3,
+    EVENT_WRONG      :4
 }
 
 class display_item():
@@ -135,10 +138,15 @@ def process():
         print('game_start')
         day+=1
         phase_start_time = time.time()
-        phase_duration = 10
+        phase_duration = 4
 
     if current_animation != None:
-        display_items.append(display_item(16 * 2,0,  f"ani{selected+1}.bmp"))
+        if current_animation == EVENT_WRONG:
+            display_items.clear()
+            display_items.append(display_item(16 * 2,0,  f"wrong.bmp"))
+        else:
+            display_items.clear()
+            display_items.append(display_item(16 * 2,0,  f"ani{selected+1}.bmp"))
         if time.time() - animation_start_time >= animation_duration:
             current_animation = None
 
@@ -155,7 +163,7 @@ def process():
             current_animation = IDX_TO_EVENT[selected]
             del event[[e.type for e in event].index(IDX_TO_EVENT[selected])]
             animation_start_time = time.time()
-            animation_duration = 0.5
+            animation_duration = 0.3
             if EVENTS[selected] == EVENT_WATER:
                 if phaze == 0:
                     score += 10
@@ -166,12 +174,15 @@ def process():
             else:
                 score += 2
         else: # wrong press
+            current_animation = EVENT_WRONG
+            animation_start_time = time.time()
+            animation_duration = 0.3
             score -= 1
 
     if time.time() - phase_start_time > phase_duration \
             or (tact[3] == 1 and old_tact[3] == 0):
         phase_start_time = time.time()
-        phase_duration = 10
+        phase_duration = 4
         phaze += 1 
         if phaze >= 3:
             phaze = 0
@@ -195,7 +206,7 @@ def process():
         get_env() # 온/습도 센서 기반 확률 산정
         last_sudden_event = time.time()
         print(f"Sudden event generation!")
-        event_interval = random.randrange(3, 12)
+        event_interval = random.randrange(3, 10)
         for i in range(1,4): # 물은 날이 변경될 때만 진행
             if EVENTS[i] in [e.type for e in event]: # 이벤트가 있을 경우 생성하지 않음
                 continue

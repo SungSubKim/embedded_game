@@ -94,7 +94,7 @@ def get_env():
     event_chances[0] = (120 - res[0]) / 100 # 습도가 낮으면 물 확률 증가
     event_chances[1] = (50 - res[1]) / 100 # 온도가 낮으면 햇빛 확률 증가
     event_chances[2] = ((32-abs(32-res[1])) + (70-abs(70-res[0]))) / 100 # 적절한 고온 다습에서 벌레 출현 증가
-    event_chances[3] = 30 / 100 # 고정 확률
+    event_chances[3] = 30 / 100 # 비료는 고정 확률
 
 
 rpikey = open("/dev/rpikey","w")
@@ -152,20 +152,20 @@ def process():
         print(f'Day passed to {day} from {old_day}')
         if random.random() < event_chances[0]:
             event.append(event_item(EVENT_WATER, only_on_day=day))
-        print(f"Current evnet: {[e.type for e in event]}")
+        print(f"Current event: {[e.type for e in event]}")
         old_day = day 
 
     if time.time() - last_sudden_event > event_interval:
-        get_env()
+        get_env() # 온/습도 센서 기반 확률 산정
         last_sudden_event = time.time()
         print(f"Sudden event generation!")
         event_interval = random.randrange(7, 12)
-        for i in range(1,4): # except water
-            if EVENTS[i] in [e.type for e in event]: # if that event already exists
+        for i in range(1,4): # 물은 날이 변경될 때만 진행
+            if EVENTS[i] in [e.type for e in event]: # 이벤트가 있을 경우 생성하지 않음
                 continue
-            if random.random() < event_chances[i]: # generate event!
+            if random.random() < event_chances[i]: # 확률적으로 이벤트 생성
                 event.append(event_item(EVENTS[i], duration=random.randrange(5,8)))
-        print(f"Current evnet: {[e.type for e in event]}")
+        print(f"Current event: {[e.type for e in event]}")
 
     if score  <1:
         print('plant is dead')
@@ -220,8 +220,8 @@ def save_old_val():
     old_event = event
     old_tact = list(tact)
 
-def sensor_init():
-    val = array.array('H', [0])  # 혹시 몰라서 만든 더미값
+def sensor_init(): # 센서 읽기 요청
+    val = array.array('H', [0]) 
     fcntl.ioctl(rpikey, 300, val, 0)
     time.sleep(0.001)
 

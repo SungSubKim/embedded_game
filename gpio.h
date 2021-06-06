@@ -85,8 +85,14 @@ int gpio_init() {
     set_gpio_output_value(gpio_ctr,19,0); //Green
     set_gpio_output_value(gpio_ctr,26,0); //Red
 
-    set_gpio_input(gpio_ctr,4);
-    set_gpio_pullup(gpio_ctr,4);
+    set_gpio_input(gpio_ctr,22);
+    set_gpio_pullup(gpio_ctr,22);
+    set_gpio_input(gpio_ctr,23);
+    set_gpio_pullup(gpio_ctr,23);
+    set_gpio_input(gpio_ctr,24);
+    set_gpio_pullup(gpio_ctr,24);
+    set_gpio_input(gpio_ctr,25);
+    set_gpio_pullup(gpio_ctr,25);
 	return 0;
 //    return gpio_ctr;
 }

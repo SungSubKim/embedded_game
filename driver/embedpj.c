@@ -57,10 +57,10 @@ uint8_t* ssd1306_val = NULL;
 
 static struct i2c_adapter *embedpj_i2c_adapter = NULL;
 
-struct i2c_client *ssd1306_client, *am2320_addr;
+struct i2c_client *ssd1306_client, *am2320_client;
 static struct i2c_device_id embedpj_idtable[] = {
-    {SSD1306_NAME, 200},
-    //{AM2320_NAME, 300},
+    {SSD1306_NAME, 1},
+    {AM2320_NAME, 2},
     {}
 };
 
@@ -147,6 +147,11 @@ static int ssd1306_remove(struct i2c_client *client){
     return 0;
 }
 
+static int am2320_remove(struct i2c_client *client){
+    // do nothing
+    return 0;
+}
+
 static int ssd1306_display_init(void){
     ssd1306_command(0xA8);
     ssd1306_command(0x3F);
@@ -182,19 +187,45 @@ static int ssd1306_display_init(void){
 }
 
 static int ssd1306_probe(struct i2c_client *client, const struct i2c_device_id *id){
+    //embedpj_idtable[id->driver_data] = *client;
+
     ssd1306_display_init();
-    //ssd1306_set_cursor();
+
+    return 0;
+}
+
+static int am2320_sensor_wakeup(void){
+    uint8_t buf[1];
+    buf[0] = 0;
+    i2c_write(am2320_client, buf, 1); // wake up
+    printk(KERN_INFO "AM2320 sensor wake up signal sent\n");
+
+    return 0;
+}
+
+static int am2320_probe(struct i2c_client *client, const struct i2c_device_id *id){
+    //embedpj_idtable[id->driver_data] = *client;
+    // do nothing
 
     return 0;
 }
 
 static struct i2c_driver ssd1306_driver = {
     .driver = {
-        .name = "ssd1306"
+        .name = SSD1306_NAME
     },
     .id_table = embedpj_idtable,
     .probe = ssd1306_probe,
     .remove = ssd1306_remove
+};
+
+static struct i2c_driver am2320_driver = {
+    .driver = {
+        .name = AM2320_NAME
+    },
+    .id_table = embedpj_idtable,
+    .probe = am2320_probe,
+    .remove = am2320_remove
 };
 
 void set_gpio_output(void *gpio_ctr, int gpio_nr) {
@@ -342,10 +373,26 @@ long device_ioctl( struct file *file, unsigned int ioctl_num, unsigned long ioct
         kfree(ssd1306_tmp);
     }
     if(ioctl_num == 300){
-        
+        uint16_t param_value[1];
+        copy_from_user((void*) param_value, (void*) ioctl_param, sizeof(uint16_t)*1);
+        am2320_sensor_wakeup();
+        uint8_t buf[3];
+        buf[0] = 0x3;
+        buf[1] = 0x0;
+        buf[2] = 0x4; // read request
+        i2c_write(am2320_client, buf, 3);
+        printk(KERN_INFO "AM2320 sensor read request\n");  
     }
     if(ioctl_num == 301){
-
+        uint16_t param_value[2];
+		uint8_t buf[8];
+        i2c_read(am2320_client, buf, 8);
+        uint16_t humidity_m10 = buf[2] << 8 | buf[3];
+        uint16_t temperature_m10 = buf[4] << 8 | buf[5];
+        printk(KERN_INFO "AM2320 sensor load req, hum %d, temp %d\n", humidity_m10, temperature_m10);
+        param_value[0] = humidity_m10;
+        param_value[1] = temperature_m10;
+		copy_to_user((void*) ioctl_param, (void*) param_value, sizeof(uint16_t)*2);
     }
 	return 0;
 }
@@ -374,17 +421,27 @@ static int init_i2c_ssd1306(void){
     }
 
     ssd1306_client = i2c_new_client_device(embedpj_i2c_adapter, &ssd1306_board_info);
+    if(ssd1306_client == NULL){
+        printk(KERN_INFO "SSD1306 client null\n");
+    }
     i2c_add_driver(&ssd1306_driver);
-    i2c_put_adapter(embedpj_i2c_adapter);
-        
+    
     ssd1306_fill(0x75);
     
-    printk(KERN_INFO "SSD1306 Load done?");
+    printk(KERN_INFO "SSD1306 Load done?\n");
 
     return 0x00;
 }
 
 static int init_i2c_am2320(void){
+    am2320_client = i2c_new_client_device(embedpj_i2c_adapter, &am2320_board_info);
+    if (am2320_client == NULL){
+        printk(KERN_INFO "AM2320 client null\n");
+    }
+    i2c_add_driver(&am2320_driver);
+    
+    printk(KERN_INFO "AM2320 Load done?\n");
+
     return 0x00;
 }
 
@@ -399,13 +456,16 @@ static int __init rpi_key_init(void)
     embedpj_i2c_adapter = i2c_get_adapter(1); // 1: rpi i2c bus is 1
     ret |= init_i2c_ssd1306();
     ret |= init_i2c_am2320();
+    i2c_put_adapter(embedpj_i2c_adapter);
 
 	return ret;
 }
 static void __exit rpi_key_exit(void) {
 	iounmap(gpio_ctr);
     i2c_unregister_device(ssd1306_client);
+    i2c_unregister_device(am2320_client);
     i2c_del_driver(&ssd1306_driver);
+    i2c_del_driver(&am2320_driver);
     kfree(ssd1306_val);
 	device_destroy(cRpiKeyClass, MKDEV(majorNumber, 0));
 	class_unregister(cRpiKeyClass);

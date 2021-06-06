@@ -16,3 +16,10 @@ if __name__ == "__main__":
                 ar1 = array.array('Q', [x%4==0 and val or 0 for x in range(128)])
                 print(ar1)
                 fcntl.ioctl(rpikey, 200, ar1, 0)
+            if ar[3] == 0:
+                dummy = array.array('H', [0])
+                fcntl.ioctl(rpikey, 300, dummy, 0)
+                time.sleep(0.1)
+                sensors = array.array('H', [0,0])
+                fcntl.ioctl(rpikey, 301, sensors, 1)
+                print([x/10 for x in sensors])

@@ -26,7 +26,7 @@ def update_area(x,y,image_name,data):
 # update_area()
 def update_char(font_data,x,y,data):
     for row in range(8):
-        data[y+row] |= font_data[row] << (64-1-x-6)
+        data[y+row] |= font_data[row] << (64-1-x-2)
 
 font = [ #96,3
    [0x00,0x00,0x00], #  
@@ -147,4 +147,4 @@ def write_str(strA,x,y,data):
     while cnt<len(strA):
         write_char(strA[cnt],x,y,data)
         cnt+=1
-        x += 3+1
+        x += 3

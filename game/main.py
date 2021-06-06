@@ -217,9 +217,9 @@ def display():
     for dis in display_items:
         update_area(dis.x,dis.y,dis.img_name,data)
 
-    write_str('day '+str(day), 63-10, 0,data);
-    write_str(phaze_str[phaze], 63-10, 8,data);
-    write_str('score '+str(score), 63-10, 16, data);
+    write_str('day '+str(day), 63-15, 0,data);
+    write_str(phaze_str[phaze], 63-15, 8,data);
+    write_str('score '+str(score), 63-15, 16, data);
     val = array.array('Q',data)
     fcntl.ioctl(rpikey,200,val,0)
 
